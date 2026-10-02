@@ -1,0 +1,33 @@
+import { z } from 'zod';
+
+export const generateRequestSchema = z.object({
+  requirement: z.string().trim().min(10, 'Requirement must be at least 10 characters').max(2000),
+  type: z.string().trim().min(1).max(50),
+  framework: z.string().trim().min(1).max(50),
+  count: z.coerce.number().int().min(1).max(10).default(5),
+});
+export type GenerateRequest = z.infer<typeof generateRequestSchema>;
+
+/** What we accept from a provider before normalising. */
+export const rawGeneratedCaseSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  priority: z.string().trim().default('Medium'),
+  confidence: z.number().min(0).max(1).default(0.7),
+  description: z.string().trim().default(''),
+  preconditions: z.string().trim().default(''),
+  steps: z.array(z.string().trim().min(1)).min(1).max(30),
+  expectedResult: z.string().trim().min(1),
+});
+
+export interface GeneratedTestCase {
+  id: string;
+  title: string;
+  type: string;
+  priority: string;
+  framework: string;
+  confidence: number;
+  description: string;
+  preconditions: string;
+  steps: string[];
+  expectedResult: string;
+}

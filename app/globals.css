@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 26% 5%;
+    --surface: 213 27% 9%;
+    --elevated: 214 27% 12%;
+    --border: 215 22% 18%;
+    --foreground: 213 20% 96%;
+    --secondary-text: 218 14% 66%;
+    --muted-text: 215 14% 46%;
+    --primary: 252 100% 68%;
+    --secondary-accent: 218 100% 68%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --danger: 0 84% 60%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .bg-surface {
+    background-color: hsl(var(--surface));
+  }
+  .bg-elevated {
+    background-color: hsl(var(--elevated));
+  }
+  .text-secondary-text {
+    color: hsl(var(--secondary-text));
+  }
+  .text-muted-text {
+    color: hsl(var(--muted-text));
+  }
+  .border-subtle {
+    border-color: hsl(var(--border));
+  }
+  .bg-primary-accent {
+    background-color: hsl(var(--primary));
+  }
+  .text-primary-accent {
+    color: hsl(var(--primary));
+  }
+  .bg-secondary-accent {
+    background-color: hsl(var(--secondary-accent));
+  }
+  .text-secondary-accent {
+    color: hsl(var(--secondary-accent));
+  }
+  .text-success {
+    color: hsl(var(--success));
+  }
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+  .bg-warning {
+    background-color: hsl(var(--warning));
+  }
+  .text-danger {
+    color: hsl(var(--danger));
+  }
+  .bg-danger {
+    background-color: hsl(var(--danger));
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-orbit {
+  animation: orbit 20s linear infinite;
+}
+.animate-orbit-reverse {
+  animation: orbit 30s linear infinite reverse;
+}
