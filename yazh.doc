@@ -1,51 +1,184 @@
-We are preparing the existing AI-Powered QA Copilot project for a prototype showcase tomorrow.
+We now need to implement the next core QA Copilot capability:
+
+USER PASTES A WEBSITE URL → SYSTEM ANALYZES THE WEBSITE → AI GENERATES TEST CASES → USER REVIEWS → APPROVES → TEST CASES ARE SAVED.
 
 IMPORTANT:
-Do NOT redesign the existing UI.
-Do NOT rewrite the architecture.
-Do NOT delete existing functionality.
-Do NOT install unnecessary packages.
-Do NOT implement the entire product yet.
+This is for a prototype showcase tomorrow.
 
-First, perform a read-only audit of the existing project.
+DO NOT:
+- redesign the existing Test Cases page
+- replace the existing AI architecture
+- rewrite working test-case CRUD
+- remove the existing requirement-based AI generator
+- install unnecessary dependencies
+- build a production-grade web crawler
+- implement authentication crawling
+- implement CAPTCHA bypass
+- implement unrestricted crawling
+- modify unrelated modules
 
-Our target prototype flow is:
+Reuse the existing Test Cases page, AI provider/service, test-case API, flow store and UI components.
 
-Dashboard
-→ Test Cases
-→ Requirement input
-→ AI-generated test cases
-→ Test data
-→ Human review/approval
-→ Automation preview
-→ Test execution result
-→ AI failure analysis
-→ Dashboard insights
+IMPLEMENTATION:
 
-Inspect:
+1. Update the existing "Generate with AI" flow.
 
-1. Existing frontend routes
-2. Existing sidebar navigation
-3. Existing Test Cases functionality
-4. Existing AI Test Generator
-5. Existing backend routes
-6. Existing AI provider/service
-7. Existing storage/repository
-8. Existing mock data
-9. Existing dashboard components
-10. Existing API client code
+Add source options:
 
-Determine:
+- Website URL
+- Requirement / User Story
+- API Endpoint
 
-- What already works
-- What is partially implemented
-- What is missing
-- Which existing components can be reused
-- Which new pages/components are required
-- Which backend endpoints are required
+Keep the existing Requirement/User Story generation working.
 
-Do NOT modify any files.
+2. For Website URL:
 
-At the end, provide a concise implementation plan ordered by priority for a tomorrow prototype.
+Show:
 
-The prototype must prioritize a reliable working demo over production completeness.
+Website URL input
+Framework selector
+Test type selector
+Number of scenarios
+
+Example:
+
+URL:
+https://example.com
+
+Framework:
+Playwright
+
+Test Type:
+Functional
+
+3. Add backend endpoint:
+
+POST /api/ai/analyze-url
+
+Input:
+
+{
+  "url": "https://example.com"
+}
+
+Create a safe prototype URL-analysis service.
+
+For the prototype, do NOT build a generic production crawler.
+
+The analyzer should return a normalized structure such as:
+
+{
+  "url": "...",
+  "title": "...",
+  "pages": [],
+  "forms": [],
+  "actions": [],
+  "interactiveElements": []
+}
+
+If real URL inspection is unreliable or blocked, use a deterministic prototype analysis based on the supplied URL and clearly keep the implementation provider-agnostic.
+
+Do not fabricate that a real browser crawl occurred.
+
+4. Add/extend the AI generation endpoint so URL analysis can be passed into the existing AI service.
+
+The AI generation input should contain:
+
+- website URL
+- discovered pages
+- forms
+- actions
+- interactive elements
+- selected framework
+- selected test type
+- requested scenario count
+
+Generate structured test cases containing:
+
+- title
+- type
+- priority
+- framework
+- confidence
+- preconditions
+- steps
+- expected result
+- tags
+
+5. Frontend flow:
+
+Generate with AI
+→ Website URL
+→ Analyze Website
+→ show analysis progress
+→ show Website Analysis Summary
+→ Generate Test Cases
+→ show generated test cases
+→ allow selecting/rejecting/editing
+→ Approve Selected
+→ save approved test cases through the existing test-case API
+→ return/show them in the existing Test Cases table
+
+6. Website Analysis Summary UI:
+
+Show:
+
+Pages discovered
+Forms detected
+Interactive elements
+Potential test areas
+
+Example:
+
+Website Analysis Complete
+
+Pages: 4
+Forms: 3
+Interactive Elements: 18
+Test Areas: 8
+
+7. Generated test cases should use the existing TestCase type/schema wherever possible.
+
+Do NOT create a duplicate test-case model.
+
+8. Example generated scenarios for a login page should include:
+
+- Valid login
+- Invalid password
+- Invalid email
+- Empty email
+- Empty password
+- Forgot password
+- Unauthorized access
+- Security/negative scenario where appropriate
+
+9. Preserve the existing dark QA Copilot visual design.
+
+10. Keep the existing mock AI provider as the default for demo reliability.
+
+11. Gemini support must continue to work through the existing provider abstraction.
+
+12. Add proper loading, error and empty states.
+
+13. Do not break:
+- existing test-case CRUD
+- existing requirement-based generation
+- test data
+- automation
+- test runs
+- failure analysis
+
+14. Run:
+- frontend typecheck
+- backend typecheck
+- ESLint
+- production build
+
+At the end, report:
+- files changed
+- endpoints added/changed
+- user flow implemented
+- validation results
+- any limitations
+
+Do not modify anything outside the scope of this feature.

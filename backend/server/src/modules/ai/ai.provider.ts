@@ -1,12 +1,12 @@
 import type { Env } from '../../config/env';
 import { AppError } from '../../utils/http';
-import type { AnalyzeRequest, GenerateRequest } from './ai.schemas';
+import type { AnalyzeFailureRequest, AnalyzeFailureRequest, GenerateRequest } from './ai.schemas';
 
 /** Providers return UNVALIDATED output; ai.service.ts validates it. */
 export interface AiProvider {
   readonly name: string;
   generateTestCases(req: GenerateRequest): Promise<unknown>;
-  analyzeFailure(req: AnalyzeRequest): Promise<unknown>;
+  analyzeFailure(req: AnalyzeFailureRequest): Promise<unknown>;
 }
 
 // ---------------- Mock (local development only) ----------------
@@ -47,15 +47,19 @@ export class MockAiProvider implements AiProvider {
   readonly name = 'mock';
   async generateTestCases(req: GenerateRequest): Promise<unknown> {
     const action =
-      /(?:should be able to|want to|can)\s+(.+?)\.?$/i.exec(req.requirement)?.[1] ??
-      req.requirement.slice(0, 80);
+      req.requirement && /(?:should be able to|want to|can)\s+(.+?)\.?$/i.exec(req.requirement)
+        ? /(?:should be able to|want to|can)\s+(.+?)\.?$/i.exec(req.requirement)![1]
+        : req.website?.title || req.website?.url || req.requirement?.slice(0, 80) || req.url || 'the application';
     return Array.from({ length: req.count }, (_, i) => {
       const sc = SCENARIOS[i % SCENARIOS.length];
+      const desc = req.website
+        ? `Website test (${sc.label}) derived from URL analysis: ${req.website.url}`
+        : `Requirement test (${sc.label}) derived from: ${req.requirement ?? req.url}`;
       return {
         title: `Verify ${sc.label}: ${action}`,
         priority: sc.priority,
         confidence: Number((0.95 - i * 0.02).toFixed(2)),
-        description: `${req.type} test (${sc.label}) derived from: ${req.requirement}`,
+        description: desc,
         preconditions: 'The application is running and the tester has the required access',
         steps: sc.steps,
         expectedResult: sc.expected,
@@ -63,7 +67,7 @@ export class MockAiProvider implements AiProvider {
     });
   }
 
-  async analyzeFailure(req: AnalyzeRequest): Promise<unknown> {
+  async analyzeFailure(req: AnalyzeFailureRequest): Promise<unknown> {
     const text = `${req.actual} ${req.expected} ${req.testTitle}`.toLowerCase();
 
     if (/timed out|timeout|after \d+ms|deadline/.test(text)) {
@@ -124,19 +128,35 @@ export class MockAiProvider implements AiProvider {
 
 // ---------------- Gemini (real provider; needs GEMINI_API_KEY) ----------------
 function buildPrompt(req: GenerateRequest): string {
-  return [
-    'You are a senior QA engineer. Generate software test cases from the requirement below.',
-    `Requirement: ${req.requirement}`,
+  const base = [
+    'You are a senior QA engineer. Generate software test cases.',
     `Test type: ${req.type}. Target framework: ${req.framework}.`,
     `Return EXACTLY ${req.count} test cases as a JSON array and nothing else.`,
     'Each item must have: title (string), priority ("Critical"|"High"|"Medium"|"Low"),',
     'confidence (number between 0 and 1), description (string), preconditions (string),',
     'steps (array of short strings), expectedResult (string).',
-    'Cover happy path, negative cases and edge cases. Do not invent features not implied by the requirement.',
-  ].join('\n');
+    'Cover happy path, negative cases and edge cases. Do not invent features not implied by the requirement or analysis.',
+  ];
+
+  if (req.website) {
+    base.push(
+      `Source: Website analysis from ${req.website.url}`,
+      `Page title: ${req.website.title}`,
+      `Discovered pages: ${req.website.pages.join(', ') || 'none'}`,
+      `Forms: ${req.website.forms.join(', ') || 'none'}`,
+      `Actions: ${req.website.actions.join(', ') || 'none'}`,
+      `Interactive elements: ${req.website.interactiveElements.slice(0, 40).join('; ') || 'none'}`,
+    );
+  } else if (req.requirement) {
+    base.push(`Requirement: ${req.requirement}`);
+  } else {
+    base.push(`URL: ${req.url}`);
+  }
+
+  return base.join('\n');
 }
 
-function buildAnalysisPrompt(req: AnalyzeRequest): string {
+function buildAnalysisPrompt(req: AnalyzeFailureRequest): string {
   return [
     'You are a senior QA engineer analysing a failed automated test.',
     `Test title: ${req.testTitle}`,
@@ -185,7 +205,7 @@ export class GeminiAiProvider implements AiProvider {
     return this.call(buildPrompt(req));
   }
 
-  async analyzeFailure(req: AnalyzeRequest): Promise<unknown> {
+  async analyzeFailure(req: AnalyzeFailureRequest): Promise<unknown> {
     return this.call(buildAnalysisPrompt(req));
   }
 }
@@ -202,3 +222,6 @@ export function createAiProvider(env: Env): AiProvider {
       throw new Error('AI_PROVIDER=openai is not implemented yet');
   }
 }
+
+
+

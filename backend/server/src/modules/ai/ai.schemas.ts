@@ -1,11 +1,30 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
-export const generateRequestSchema = z.object({
-  requirement: z.string().trim().min(10, 'Requirement must be at least 10 characters').max(2000),
-  type: z.string().trim().min(1).max(50),
-  framework: z.string().trim().min(1).max(50),
-  count: z.coerce.number().int().min(1).max(10).default(5),
-});
+export const generateRequestSchema = z
+  .object({
+    requirement: z.string().trim().max(2000).optional(),
+    type: z.string().trim().min(1).max(50),
+    framework: z.string().trim().min(1).max(50),
+    count: z.coerce.number().int().min(1).max(10).default(5),
+    url: z.string().trim().url().max(2048).optional(),
+    website: z
+      .object({
+        url: z.string().trim().url().max(2048),
+        title: z.string().trim().max(200),
+        pages: z.array(z.string().trim()).max(50),
+        forms: z.array(z.string().trim()).max(50),
+        actions: z.array(z.string().trim()).max(80),
+        interactiveElements: z.array(z.string().trim()).max(200),
+      })
+      .optional(),
+  })
+  .refine(
+    (data) => Boolean(data.requirement?.trim().length && data.requirement.trim().length >= 10) || Boolean(data.website?.url || data.url),
+    {
+      message: 'Provide either a valid requirement (min 10 chars) or a website analysis.',
+      path: ['requirement'],
+    },
+  );
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 
 /** What we accept from a provider before normalising. */
@@ -32,14 +51,21 @@ export interface GeneratedTestCase {
   expectedResult: string;
 }
 
-export const analyzeRequestSchema = z.object({
-  testTitle: z.string().trim().min(3).max(300),
-  steps: z.array(z.string().trim().min(1)).max(30).default([]),
-  expected: z.string().trim().min(1).max(2000),
-  actual: z.string().trim().min(1).max(2000),
-  framework: z.string().trim().min(1).max(50).default('Playwright'),
+export const analyzeFailureRequestSchema = z.object({
+  url: z.string().trim().url('URL must be valid').max(2048),
 });
-export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
+export type AnalyzeUrlRequest = z.infer<typeof analyzeFailureRequestSchema>
+export type AnalyzeFailureRequest = z.infer<typeof analyzeFailureRequestSchema>;
+
+export const websiteAnalysisSchema = z.object({
+  url: z.string().url(),
+  title: z.string().min(1),
+  pages: z.array(z.string()).max(50),
+  forms: z.array(z.string()).max(50),
+  actions: z.array(z.string()).max(80),
+  interactiveElements: z.array(z.string()).max(200),
+});
+export type WebsiteAnalysis = z.infer<typeof websiteAnalysisSchema>;
 
 /** What we accept from a provider before normalising. */
 export const rawAnalysisSchema = z.object({
@@ -59,3 +85,6 @@ export interface FailureAnalysisResult {
   patch: string;
   confidence: number;
 }
+
+
+
