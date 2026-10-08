@@ -1,9 +1,31 @@
 'use client';
 
+import { useMemo } from 'react';
 import { recentTestRuns } from '@/data/mockData';
+import { runCounts, useFlowState } from '@/lib/flow-store';
 import { cn } from '@/lib/utils';
+import type { TestRun } from '@/types';
 
 export function RecentTestRuns() {
+  const { runs } = useFlowState();
+
+  const rows: TestRun[] = useMemo(() => {
+    const local: TestRun[] = runs.map((run) => {
+      const counts = runCounts(run);
+      return {
+        id: run.id,
+        name: run.name,
+        framework: run.framework,
+        total: run.total,
+        passed: counts.passed,
+        failed: counts.failed,
+        duration: run.status === 'Running' ? '—' : run.duration,
+        status: run.status,
+      };
+    });
+    return [...local, ...recentTestRuns].slice(0, 6);
+  }, [runs]);
+
   return (
     <div className="rounded-xl bg-surface border border-border overflow-hidden">
       <div className="p-5 border-b border-border">
@@ -29,7 +51,7 @@ export function RecentTestRuns() {
             </tr>
           </thead>
           <tbody>
-            {recentTestRuns.map((run) => (
+            {rows.map((run) => (
               <tr
                 key={run.id}
                 className="border-b border-border last:border-0 hover:bg-elevated/50 transition-colors"
@@ -54,13 +76,19 @@ export function RecentTestRuns() {
                       'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
                       run.status === 'Passed'
                         ? 'bg-success/10 text-success border border-success/20'
-                        : 'bg-danger/10 text-danger border border-danger/20'
+                        : run.status === 'Running'
+                          ? 'bg-primary/10 text-primary-accent border border-primary/20'
+                          : 'bg-danger/10 text-danger border border-danger/20'
                     )}
                   >
                     <span
                       className={cn(
                         'w-1.5 h-1.5 rounded-full',
-                        run.status === 'Passed' ? 'bg-success' : 'bg-danger'
+                        run.status === 'Passed'
+                          ? 'bg-success'
+                          : run.status === 'Running'
+                            ? 'bg-primary-accent animate-pulse'
+                            : 'bg-danger'
                       )}
                     />
                     {run.status}
