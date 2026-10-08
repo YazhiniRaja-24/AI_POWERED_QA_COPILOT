@@ -1,0 +1,51 @@
+We are preparing the existing AI-Powered QA Copilot project for a prototype showcase tomorrow.
+
+IMPORTANT:
+Do NOT redesign the existing UI.
+Do NOT rewrite the architecture.
+Do NOT delete existing functionality.
+Do NOT install unnecessary packages.
+Do NOT implement the entire product yet.
+
+First, perform a read-only audit of the existing project.
+
+Our target prototype flow is:
+
+Dashboard
+→ Test Cases
+→ Requirement input
+→ AI-generated test cases
+→ Test data
+→ Human review/approval
+→ Automation preview
+→ Test execution result
+→ AI failure analysis
+→ Dashboard insights
+
+Inspect:
+
+1. Existing frontend routes
+2. Existing sidebar navigation
+3. Existing Test Cases functionality
+4. Existing AI Test Generator
+5. Existing backend routes
+6. Existing AI provider/service
+7. Existing storage/repository
+8. Existing mock data
+9. Existing dashboard components
+10. Existing API client code
+
+Determine:
+
+- What already works
+- What is partially implemented
+- What is missing
+- Which existing components can be reused
+- Which new pages/components are required
+- Which backend endpoints are required
+
+Do NOT modify any files.
+
+At the end, provide a concise implementation plan ordered by priority for a tomorrow prototype.
+
+The prototype must prioritize a reliable working demo over production completeness.

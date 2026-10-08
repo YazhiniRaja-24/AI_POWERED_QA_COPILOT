@@ -31,3 +31,31 @@ export interface GeneratedTestCase {
   steps: string[];
   expectedResult: string;
 }
+
+export const analyzeRequestSchema = z.object({
+  testTitle: z.string().trim().min(3).max(300),
+  steps: z.array(z.string().trim().min(1)).max(30).default([]),
+  expected: z.string().trim().min(1).max(2000),
+  actual: z.string().trim().min(1).max(2000),
+  framework: z.string().trim().min(1).max(50).default('Playwright'),
+});
+export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
+
+/** What we accept from a provider before normalising. */
+export const rawAnalysisSchema = z.object({
+  category: z.string().trim().min(1).max(120),
+  rootCause: z.string().trim().min(1).max(1500),
+  likelihood: z.string().trim().min(1).max(120),
+  recommendation: z.string().trim().min(1).max(2000),
+  patch: z.string().trim().max(4000).default(''),
+  confidence: z.number().min(0).max(1).default(0.7),
+});
+
+export interface FailureAnalysisResult {
+  category: string;
+  rootCause: string;
+  likelihood: string;
+  recommendation: string;
+  patch: string;
+  confidence: number;
+}

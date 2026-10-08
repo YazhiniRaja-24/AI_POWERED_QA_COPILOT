@@ -1,11 +1,12 @@
 import type { Env } from '../../config/env';
 import { AppError } from '../../utils/http';
-import type { GenerateRequest } from './ai.schemas';
+import type { AnalyzeRequest, GenerateRequest } from './ai.schemas';
 
 /** Providers return UNVALIDATED output; ai.service.ts validates it. */
 export interface AiProvider {
   readonly name: string;
   generateTestCases(req: GenerateRequest): Promise<unknown>;
+  analyzeFailure(req: AnalyzeRequest): Promise<unknown>;
 }
 
 // ---------------- Mock (local development only) ----------------
@@ -61,6 +62,64 @@ export class MockAiProvider implements AiProvider {
       };
     });
   }
+
+  async analyzeFailure(req: AnalyzeRequest): Promise<unknown> {
+    const text = `${req.actual} ${req.expected} ${req.testTitle}`.toLowerCase();
+
+    if (/timed out|timeout|after \d+ms|deadline/.test(text)) {
+      return {
+        category: 'Timeout / flaky timing',
+        rootCause: `"${req.testTitle}" waited for an element or response that never reached the expected state within the configured timeout. This usually means the UI stayed in a loading state or the backend responded too slowly under the current environment.`,
+        likelihood: 'High (85%)',
+        recommendation:
+          'Verify the backend dependency is healthy in the test environment, then increase the explicit wait budget for this step and assert on a stable anchor element instead of a transient one.',
+        patch: `await expect(page.locator('main')).toBeVisible({ timeout: 10_000 });`,
+        confidence: 0.91,
+      };
+    }
+    if (/permission|unauthorised|unauthorized|403|forbidden|not allowed/.test(text)) {
+      return {
+        category: 'Access control / permissions',
+        rootCause: `The executing user does not hold the role required by "${req.testTitle}". The test ran with credentials that lack the permission the requirement assumes.`,
+        likelihood: 'High (80%)',
+        recommendation:
+          'Run this case with a user that has the required role, or update the seeding script so the test account is granted the permission before execution.',
+        patch: `await test.use({ storageState: 'auth/member.json' });`,
+        confidence: 0.88,
+      };
+    }
+    if (/validation|required|invalid|error message|missing field/.test(text)) {
+      return {
+        category: 'Validation gap',
+        rootCause: `The application accepted input it should have rejected, or the validation message expected by "${req.testTitle}" was not rendered. The assertion and the UI copy have drifted apart.`,
+        likelihood: 'Medium (65%)',
+        recommendation:
+          'Confirm the expected copy with the product spec, then assert on the field-level error element rather than a raw text match so minor wording changes do not break the test.',
+        patch: `await expect(page.getByText(/required/i).first()).toBeVisible();`,
+        confidence: 0.84,
+      };
+    }
+    if (/not visible|locator|element|button|found/.test(text)) {
+      return {
+        category: 'Selector / UI regression',
+        rootCause: `The locator used by "${req.testTitle}" no longer matches the rendered DOM — likely a label, role or component change since the test was generated.`,
+        likelihood: 'Medium (70%)',
+        recommendation:
+          'Re-anchor the step on a accessible role and visible name (role + name) instead of CSS selectors, and re-record the baseline screenshot for this flow.',
+        patch: `await expect(page.getByRole('button', { name: /submit/i })).toBeEnabled();`,
+        confidence: 0.86,
+      };
+    }
+    return {
+      category: 'Assertion mismatch / functional defect',
+      rootCause: `"${req.testTitle}" produced "${req.actual}" while the requirement expects "${req.expected}". Either the feature regressed or the expected value in the test data is out of date.`,
+      likelihood: 'Medium (60%)',
+      recommendation:
+        'Reproduce the flow manually with the generated test data set, compare against the requirement, and decide whether to fix the product or update the expected outcome.',
+      patch: `// Re-run with: npx playwright test --trace on\n// Expected: ${req.expected.replace(/\n/g, ' ')}`,
+      confidence: 0.8,
+    };
+  }
 }
 
 // ---------------- Gemini (real provider; needs GEMINI_API_KEY) ----------------
@@ -77,11 +136,26 @@ function buildPrompt(req: GenerateRequest): string {
   ].join('\n');
 }
 
+function buildAnalysisPrompt(req: AnalyzeRequest): string {
+  return [
+    'You are a senior QA engineer analysing a failed automated test.',
+    `Test title: ${req.testTitle}`,
+    `Framework: ${req.framework}`,
+    `Steps: ${req.steps.join(' | ') || 'not recorded'}`,
+    `Expected: ${req.expected}`,
+    `Actual: ${req.actual}`,
+    'Return a single JSON object and nothing else, with keys:',
+    'category (short failure category), rootCause (why it failed), likelihood (e.g. "High (85%)"),',
+    'recommendation (how to fix or investigate), patch (short code snippet or command, may be empty),',
+    'confidence (number between 0 and 1).',
+  ].join('\n');
+}
+
 export class GeminiAiProvider implements AiProvider {
   readonly name = 'gemini';
   constructor(private readonly apiKey: string, private readonly model: string) {}
 
-  async generateTestCases(req: GenerateRequest): Promise<unknown> {
+  private async call(prompt: string): Promise<unknown> {
     let res: Response;
     try {
       res = await fetch(
@@ -90,7 +164,7 @@ export class GeminiAiProvider implements AiProvider {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
           body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: buildPrompt(req) }] }],
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: 'application/json', temperature: 0.4 },
           }),
         },
@@ -105,6 +179,14 @@ export class GeminiAiProvider implements AiProvider {
     const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
     // Malformed JSON throws a plain Error -> ai.service retries once.
     return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+  }
+
+  async generateTestCases(req: GenerateRequest): Promise<unknown> {
+    return this.call(buildPrompt(req));
+  }
+
+  async analyzeFailure(req: AnalyzeRequest): Promise<unknown> {
+    return this.call(buildAnalysisPrompt(req));
   }
 }
 
