@@ -1,4 +1,5 @@
 import { apiRequest } from './api-client';
+import type { WebsiteAnalysisData } from './url-analysis-api';
 import {
   frameworkOptions,
   priorityOptions,
@@ -39,10 +40,15 @@ export interface GeneratedTestCase {
   preconditions: string;
   steps: string[];
   expectedResult: string;
+  targetPage?: string;
+  evidence?: string;
+  tags?: string[];
 }
 
 export interface GenerateParams {
-  requirement: string;
+  requirement?: string;
+  url?: string;
+  website?: WebsiteAnalysisData;
   type: string;
   framework: string;
   count: number;
@@ -95,19 +101,46 @@ export function toTestCaseInput(
   generated: GeneratedTestCase,
   createdBy: string,
 ): TestCaseInput {
+  const details: string[] = [];
+  if (generated.targetPage) details.push(`Target page: ${generated.targetPage}`);
+  if (generated.evidence) details.push(`Evidence (observed): ${generated.evidence}`);
+  const description = [generated.description, ...details]
+    .filter((part) => part && part.trim().length > 0)
+    .join('\n\n')
+    .slice(0, 5000);
+
+  const tags = normalizeTags(['ai-generated', ...(generated.tags ?? [])]);
+
   return {
-    title: generated.title,
-    description: generated.description,
+    title: generated.title.slice(0, 200),
+    description,
     type: ensureOption(generated.type, typeOptions, 'type'),
     priority: ensureOption(generated.priority, priorityOptions, 'priority'),
     framework: ensureOption(generated.framework, frameworkOptions, 'framework'),
     status: 'Draft',
-    preconditions: generated.preconditions,
-    steps: generated.steps,
-    expectedResult: generated.expectedResult,
-    tags: ['ai-generated'],
+    preconditions: generated.preconditions.slice(0, 5000),
+    steps: generated.steps
+      .map((step) => step.trim().slice(0, 1000))
+      .filter(Boolean)
+      .slice(0, 50),
+    expectedResult: generated.expectedResult.slice(0, 5000),
+    tags,
     createdBy,
   };
+}
+
+function normalizeTags(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    const tag = value.trim().slice(0, 50);
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+    if (out.length >= 30) break;
+  }
+  return out;
 }
 
 export const testCaseApi = {
