@@ -16,6 +16,8 @@ const schema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
   OPENAI_API_KEY: z.string().optional(),
+  URL_INSPECT_MAX_PAGES: z.coerce.number().int().min(1).max(10).default(3),
+  URL_INSPECT_TIMEOUT_MS: z.coerce.number().int().min(3000).max(60000).default(15000),
 });
 
 // Treat empty strings (e.g. "MONGODB_URI=") as unset.
