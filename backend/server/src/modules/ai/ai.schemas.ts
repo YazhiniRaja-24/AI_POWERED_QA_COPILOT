@@ -62,6 +62,7 @@ export const generateRequestSchema = z
     count: z.coerce.number().int().min(1).max(10).default(5),
     url: z.string().trim().url().max(2048).optional(),
     website: websiteAnalysisSchema.optional(),
+    selectedPages: z.array(z.string().trim().url().max(2048)).max(50).optional(),
   })
   .refine(
     (data) =>
