@@ -11,6 +11,8 @@ const schema = z.object({
   MONGODB_URI: z.string().optional(),
   MONGODB_DB: z.string().default('qa_copilot'),
   DATA_FILE: z.string().default(path.resolve(process.cwd(), 'data/test-cases.json')),
+  RUNS_FILE: z.string().default(path.resolve(process.cwd(), 'data/runs.json')),
+  SCREENSHOT_DIR: z.string().default(path.resolve(process.cwd(), 'data/screenshots')),
   SEED_DEMO_DATA: z.enum(['true', 'false']).default('true'),
   AI_PROVIDER: z.enum(['mock', 'gemini', 'openai']).default('mock'),
   GEMINI_API_KEY: z.string().optional(),
@@ -18,6 +20,8 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   URL_INSPECT_MAX_PAGES: z.coerce.number().int().min(1).max(10).default(3),
   URL_INSPECT_TIMEOUT_MS: z.coerce.number().int().min(3000).max(60000).default(15000),
+  EXEC_TIMEOUT_MS: z.coerce.number().int().min(2000).max(120000).default(20000),
+  EXEC_CONCURRENCY: z.coerce.number().int().min(1).max(4).default(2),
 });
 
 // Treat empty strings (e.g. "MONGODB_URI=") as unset.
