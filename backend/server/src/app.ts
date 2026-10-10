@@ -4,11 +4,13 @@ import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { createAiRouter } from './modules/ai/ai.routes';
 import type { AiService } from './modules/ai/ai.service';
+import { createRunRouter } from './modules/runs/run.routes';
+import type { RunService } from './modules/runs/run.service';
 import type { TestCaseRepository } from './modules/test-cases/testCase.repository';
 import { createTestCaseRouter } from './modules/test-cases/testCase.routes';
 import { ok } from './utils/http';
 
-export function createApp(repo: TestCaseRepository, ai: AiService) {
+export function createApp(repo: TestCaseRepository, ai: AiService, runs: RunService) {
   const app = express();
   app.use(cors({ origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()) }));
   app.use(express.json({ limit: '100kb' }));
@@ -21,8 +23,11 @@ export function createApp(repo: TestCaseRepository, ai: AiService) {
       aiProvider: ai.providerName,
     }));
   });
+  // Screenshots are served before the router so GET paths are not treated as run ids.
+  app.use('/api/runs/screenshots', express.static(env.SCREENSHOT_DIR));
   app.use('/api/test-cases', createTestCaseRouter(repo));
   app.use('/api/ai', createAiRouter(ai));
+  app.use('/api/runs', createRunRouter(runs));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
