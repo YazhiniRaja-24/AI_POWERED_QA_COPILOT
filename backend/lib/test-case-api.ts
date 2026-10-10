@@ -49,6 +49,7 @@ export interface GenerateParams {
   requirement?: string;
   url?: string;
   website?: WebsiteAnalysisData;
+  selectedPages?: string[];
   type: string;
   framework: string;
   count: number;
