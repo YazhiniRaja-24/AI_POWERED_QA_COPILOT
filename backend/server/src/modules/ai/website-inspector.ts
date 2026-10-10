@@ -193,7 +193,7 @@ const COLLECT_SCRIPT = String.raw`(() => {
   };
 })()`;
 
-function isPrivateIp(ip: string): boolean {
+export function isPrivateIp(ip: string): boolean {
   if (net.isIPv4(ip)) {
     const [a, b] = ip.split('.').map(Number);
     if (a === 0) return true;
@@ -217,7 +217,7 @@ function isPrivateIp(ip: string): boolean {
 
 const BLOCKED_HOST_SUFFIXES = ['.localhost', '.local', '.internal'];
 
-function hostIsBlocked(hostname: string): boolean {
+export function hostIsBlocked(hostname: string): boolean {
   const host = hostname.toLowerCase();
   if (!host) return true;
   if (host === 'localhost' || host === '[::1]' || host === '::1') return true;
@@ -226,7 +226,7 @@ function hostIsBlocked(hostname: string): boolean {
 }
 
 /** Fast literal check used for every in-page network request (no DNS). */
-function isBlockedNetworkUrl(rawUrl: string): boolean {
+export function isBlockedNetworkUrl(rawUrl: string): boolean {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -241,7 +241,7 @@ function isBlockedNetworkUrl(rawUrl: string): boolean {
 }
 
 /** Full validation including DNS resolution. Used before each navigation. */
-async function assertSafeUrl(rawUrl: string): Promise<URL> {
+export async function assertSafeUrl(rawUrl: string): Promise<URL> {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -300,7 +300,7 @@ async function assertSafeUrl(rawUrl: string): Promise<URL> {
   return url;
 }
 
-function classifyNavigationError(error: unknown, url: string): AppError {
+export function classifyNavigationError(error: unknown, url: string): AppError {
   if (error instanceof AppError) return error;
   const message = error instanceof Error ? error.message : String(error);
   if (/timeout/i.test(message)) {
